@@ -98,12 +98,14 @@
       // 注册test动作
       client.registerAction("test", function (request, resolve, reject) {
         // 从Python请求中获取参数
-        var param = request.param.t || request.data.t; // 根据实际请求结构调整
+        var s = request.param.s || request.data.s; // 根据实际请求结构调整
+        console.log(s)
+        var a = {"X-MS-STUB": s};
 
         // 发送消息到父页面请求调用get_signature
         window.parent.postMessage({
           type: 'get_signature_request',
-          param: param
+          param: a
         }, '*');
 
         // 监听父页面的响应
