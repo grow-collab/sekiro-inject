@@ -1,0 +1,54 @@
+// ==UserScript==
+// @name         抖音iframe注入式CSP绕过
+// @namespace    http://tampermonkey.net/
+// @version      2025-06-15
+// @description  try to take over the world!
+// @author       You
+// @match        https://live.douyin.com/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=douyin.com
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    // 创建iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = 'https://grow-collab.github.io/sekiro-inject/inject.html'; //指向GitHub的文件映射地址
+    document.body.appendChild(iframe);
+
+    // 监听来自iframe的消息
+    window.addEventListener('message', function(event) {
+        // 确保消息来源正确
+        if (event.origin !== 'https://grow-collab.github.io') {
+            console.warn('Ignored message from unexpected origin:', event.origin);
+            return;
+        }
+
+        // 处理get_signature请求
+        if (event.data.type === 'get_signature_request') {
+            console.log('Received get_signature_request:', event.data.a);
+            try {
+                // 检查get_signature函数是否存在
+                if (typeof window.get_signature !== 'function') {
+                    throw new Error('get_signature function not found');
+                }
+                // 调用get_signature
+                const result = window.get_signature(event.data.a);
+                // 发送成功响应
+                iframe.contentWindow.postMessage({
+                    type: 'get_signature_response',
+                    result: result
+                }, 'https://grow-collab.github.io');
+            } catch (error) {
+                // 发送错误响应
+                console.error('Error in get_signature:', error.message);
+                iframe.contentWindow.postMessage({
+                    type: 'get_signature_error',
+                    error: error.message
+                }, 'https://grow-collab.github.io');
+            }
+        }
+    });
+})();
