@@ -107,7 +107,7 @@
         // 调试日志：打印完整请求对象
         console.log("Received request: ", JSON.stringify(request, null, 2));
         
-        // 获取参数s，支持顶层s、param.s 或 data.s
+        // 获取请求的参数s，支持顶层s、param.s 或 data.s
         var s = request.s || (request.param && request.param.s) || (request.data && request.data.s);
         if (!s) {
           console.error("Missing required parameter 's'");
@@ -115,12 +115,12 @@
           return;
         }
         console.log("Parameter s: ", s);
-        var a = {"X-MS-STUB": s};
+        var a = {"X-MS-STUB": s}; // 构建get_signature需要传入的参数对象
 
         // 发送消息到父页面请求调用get_signature
         window.parent.postMessage({
           type: 'get_signature_request',
-          param: a
+          a: a
         }, 'https://live.douyin.com'); // 指定父窗口源
 
         // 监听父页面的响应
