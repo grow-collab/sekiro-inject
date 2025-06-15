@@ -21,23 +21,15 @@
             function t(o) {
               this.mSocket = new e(o)
             }
-
-            return t.prototype.close = function () {
-              this.mSocket.close()
-            }, t.prototype.onmessage = function (e) {
-              this.mSocket.onmessage = e
-            }, t.prototype.onopen = function (e) {
-              this.mSocket.onopen = e
-            }, t.prototype.onclose = function (e) {
-              this.mSocket.onclose = e
-            }, t.prototype.send = function (e) {
-              this.mSocket.send(e)
-            }, new t(o)
+            return t.prototype.close = function () { this.mSocket.close() },
+                   t.prototype.onmessage = function (e) { this.mSocket.onmessage = e },
+                   t.prototype.onopen = function (e) { this.mSocket.onopen = e },
+                   t.prototype.onclose = function (e) { this.mSocket.onclose = e },
+                   t.prototype.send = function (e) { this.mSocket.send(e) },
+                   new t(o)
           }
         }
-        if ("object" == typeof WebSocket) return function (o) {
-          return new WebSocket(o)
-        };
+        if ("object" == typeof WebSocket) return function (o) { return new WebSocket(o) };
         throw new Error("the js environment do not support websocket")
       };
 
@@ -47,22 +39,14 @@
         try {
           this.socket = this.webSocketFactory(this.wsURL)
         } catch (o) {
-          return console.log("sekiro: create connection failed,reconnect after 2s:" + o), void setTimeout(function () {
-            e.connect()
-          }, 2000)
+          console.log("sekiro: create connection failed,reconnect after 2s:" + o);
+          return void setTimeout(function () { e.connect() }, 2000)
         }
-
-        this.socket.onmessage(function (o) {
-          e.handleSekiroRequest(o.data)
-        });
-        this.socket.onopen(function () {
-          console.log("sekiro: open a sekiro client connection")
-        });
+        this.socket.onmessage(function (o) { e.handleSekiroRequest(o.data) });
+        this.socket.onopen(function () { console.log("sekiro: open a sekiro client connection") });
         this.socket.onclose(function () {
           console.log("sekiro: disconnected ,reconnection after 2s");
-          setTimeout(function () {
-            e.connect()
-          }, 2000)
+          setTimeout(function () { e.connect() }, 2000)
         });
       };
 
@@ -75,14 +59,8 @@
             var s = this.handlers[n], i = this;
             try {
               s(o, function (e) {
-                try {
-                  i.sendSuccess(t, e)
-                } catch (e) {
-                  i.sendFailed(t, "e:" + e)
-                }
-              }, function (e) {
-                i.sendFailed(t, e)
-              })
+                try { i.sendSuccess(t, e) } catch (e) { i.sendFailed(t, "e:" + e) }
+              }, function (e) { i.sendFailed(t, e) })
             } catch (e) {
               console.log("error: " + e), i.sendFailed(t, ":" + e)
             }
@@ -92,12 +70,10 @@
 
       SekiroClient.prototype.sendSuccess = function (e, o) {
         var t;
-        if ("string" == typeof o) try {
-          t = JSON.parse(o)
-        } catch (e) {
-          (t = {}).data = o
-        } else "object" == typeof o ? t = o : (t = {}).data = o;
-        (Array.isArray(t) || "string" == typeof t) && (t = {data: t, code: 0}), t.code ? t.code = 0 : (t.status, t.status = 0), t.__sekiro_seq__ = e;
+        if ("string" == typeof o) try { t = JSON.parse(o) } catch (e) { (t = {}).data = o }
+        else "object" == typeof o ? t = o : (t = {}).data = o;
+        (Array.isArray(t) || "string" == typeof t) && (t = {data: t, code: 0}),
+        t.code ? t.code = 0 : (t.status, t.status = 0), t.__sekiro_seq__ = e;
         var n = JSON.stringify(t);
         console.log("response :" + n), this.socket.send(n)
       };
@@ -113,16 +89,35 @@
       SekiroClient.prototype.registerAction = function (e, o) {
         if ("string" != typeof e) throw new Error("an action must be string");
         if ("function" != typeof o) throw new Error("a handler must be function");
-        return console.log("sekiro: register action: " + e), this.handlers[e] = o, this
+        console.log("sekiro: register action: " + e), this.handlers[e] = o, this
       };
 
-      // ✅ 建立连接
+      // 建立连接
       var client = new SekiroClient("ws://127.0.0.1:5612/business/register?group=dy_live&clientId=" + Math.random());
 
-      // ✅ 注册一个演示方法
+      // 注册test动作
       client.registerAction("test", function (request, resolve, reject) {
-        var data = get_signature('a9513cb5bcaf7397d630923ea8aff023')
-        resolve(data);
+        // 从Python请求中获取参数
+        var param = request.param || request.data; // 根据实际请求结构调整
+
+        // 发送消息到父页面请求调用get_signature
+        window.parent.postMessage({
+          type: 'get_signature_request',
+          param: param
+        }, '*');
+
+        // 监听父页面的响应
+        window.addEventListener('message', function handler(event) {
+          if (event.data.type === 'get_signature_response') {
+            // 成功获取结果，返回给Python
+            resolve(event.data.result);
+            window.removeEventListener('message', handler); // 移除监听器
+          } else if (event.data.type === 'get_signature_error') {
+            // 调用失败，返回错误
+            reject(event.data.error);
+            window.removeEventListener('message', handler); // 移除监听器
+          }
+        });
       });
 
     })();
