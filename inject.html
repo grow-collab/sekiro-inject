@@ -52,7 +52,14 @@
 
       SekiroClient.prototype.handleSekiroRequest = function (e) {
         console.log("receive sekiro request: " + e);
-        var o = JSON.parse(e), t = o.__sekiro_seq__;
+        var o;
+        try {
+          o = JSON.parse(e);
+        } catch (err) {
+          console.error("sekiro: failed to parse request JSON: " + err);
+          return this.sendFailed(null, "Invalid JSON: " + err);
+        }
+        var t = o.__sekiro_seq__;
         if (o.action) {
           var n = o.action;
           if (this.handlers[n]) {
@@ -97,31 +104,44 @@
 
       // 注册test动作
       client.registerAction("test", function (request, resolve, reject) {
-        // 从Python请求中获取参数
-        var s = request.param.s || request.data.s; // 根据实际请求结构调整
-        console.log(s)
+        // 调试日志：打印完整请求对象
+        console.log("Received request: ", JSON.stringify(request, null, 2));
+        
+        // 获取参数s，支持顶层s、param.s 或 data.s
+        var s = request.s || (request.param && request.param.s) || (request.data && request.data.s);
+        if (!s) {
+          console.error("Missing required parameter 's'");
+          reject("Missing required parameter 's'");
+          return;
+        }
+        console.log("Parameter s: ", s);
         var a = {"X-MS-STUB": s};
 
         // 发送消息到父页面请求调用get_signature
         window.parent.postMessage({
           type: 'get_signature_request',
           param: a
-        }, '*');
+        }, 'https://live.douyin.com'); // 指定父窗口源
 
         // 监听父页面的响应
         window.addEventListener('message', function handler(event) {
+          // 添加5秒超时
+          const timeout = setTimeout(() => {
+            window.removeEventListener('message', handler);
+            reject("No response from parent window within 5 seconds");
+          }, 5000);
+          
           if (event.data.type === 'get_signature_response') {
-            // 成功获取结果，返回给Python
+            clearTimeout(timeout);
             resolve(event.data.result);
-            window.removeEventListener('message', handler); // 移除监听器
+            window.removeEventListener('message', handler);
           } else if (event.data.type === 'get_signature_error') {
-            // 调用失败，返回错误
+            clearTimeout(timeout);
             reject(event.data.error);
-            window.removeEventListener('message', handler); // 移除监听器
+            window.removeEventListener('message', handler);
           }
         });
       });
-
     })();
   </script>
 </body>
