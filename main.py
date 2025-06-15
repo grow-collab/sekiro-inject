@@ -24,8 +24,9 @@ import requests
 
 url = "http://127.0.0.1:5612/business/invoke"
 params = {
-    "group": "dingdian",
-    "action": "get_encData",
+    "group": "dy_live",
+    "action": "test",
+    "s":"xx"
 }
 data = {
     't': 'xx'
